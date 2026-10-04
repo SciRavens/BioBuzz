@@ -59,4 +59,16 @@ public class Intake {
     public void stopTransfer() {
         transferMotor.setPower(TRANSFER_OFF);
     }
+
+    public void feedBalls() {
+        startIntakeAndTransfer();
+    }
+
+    public void stopFeeding() {
+        intakeStop();
+    }
+
+    public void startReverseIntake() {
+        intakeMotor.setPower(-INTAKE_POWER);
+    }
 }
