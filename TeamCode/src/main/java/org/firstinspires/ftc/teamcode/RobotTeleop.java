@@ -17,6 +17,7 @@ public class RobotTeleop extends OpMode {
 
     private Timer timer;
     private Timer rapidTimer;
+    private Timer shootIntervalTimer;
 
     private Follower follower;
     private Robot robot;
@@ -29,6 +30,7 @@ public class RobotTeleop extends OpMode {
     public void init() {
         timer = new Timer();
         rapidTimer = new Timer();
+        shootIntervalTimer = new Timer();
 
         follower = Constants.create(hardwareMap);
         follower.setPose(new Pose(0, 0, 0));
@@ -77,6 +79,21 @@ public class RobotTeleop extends OpMode {
         Pose currentPose = follower.pose();
         double distanceToGoal = robot.getDistanceFromGoal(follower);
 
+        // ------------------ VOLTAGE CARGO TRACKER ------------------
+        double drivetrainMagnitude = (Math.abs(xInput) + Math.abs(yInput) + Math.abs(turnInput)) * powerScale;
+        robot.cargoTracker.update(drivetrainMagnitude);
+
+        // Alert drivers when reaching maximum capacity (4/4 balls)
+        if (robot.cargoTracker.checkAndClearFullCapacityAlert()) {
+            gamepad1.rumble(300);
+            gamepad2.rumble(300);
+        }
+
+        // Manual cargo queue reset override (D-Pad Down on Gamepad 2)
+        if (gamepad2.dpad_down) {
+            robot.cargoTracker.clear();
+        }
+
         // ------------------ TURRET TRACKING & MANUAL OVERRIDE ------------------
         // Pressing D-Pad Left or Right overrides auto-tracking immediately
         turretTracker.update(currentPose, gamepad2.dpad_left, gamepad2.dpad_right);
@@ -122,6 +139,10 @@ public class RobotTeleop extends OpMode {
             if (robot.shooter.reachedSpeed()) {
                 robot.intake.shootArtifacts();
                 robot.gate.gateOpen();
+                if (shootIntervalTimer.milliseconds() > 450 && !robot.cargoTracker.isEmpty()) {
+                    robot.cargoTracker.popShooterCargo();
+                    shootIntervalTimer.reset();
+                }
                 gamepad1.rumble(500);
                 gamepad2.rumble(500);
             }
@@ -130,6 +151,7 @@ public class RobotTeleop extends OpMode {
                 robot.intake.intakeStop();
                 robot.intake.stopTransfer();
                 robot.gate.gateClose();
+                robot.cargoTracker.clear();
                 isRapidFireOn = false;
             }
         } else {
@@ -138,6 +160,10 @@ public class RobotTeleop extends OpMode {
                 if (robot.shooter.reachedSpeed()) {
                     robot.intake.startTransferOnly();
                     robot.gate.gateOpen();
+                    if (shootIntervalTimer.milliseconds() > 450 && !robot.cargoTracker.isEmpty()) {
+                        robot.cargoTracker.popShooterCargo();
+                        shootIntervalTimer.reset();
+                    }
                     gamepad1.rumble(500);
                     gamepad2.rumble(500);
                 }
@@ -151,6 +177,7 @@ public class RobotTeleop extends OpMode {
 
         // ------------------ TELEMETRY ------------------
         robot.shooter.shooterLightUpdate();
+        robot.cargoTracker.addTelemetry(telemetry);
         telemetry.addData("Alliance", Robot.currentAlliance);
         telemetry.addData("Rapid Fire Active", isRapidFireOn);
         telemetry.addData("Goal Distance", "%.1f in", distanceToGoal);
@@ -166,5 +193,6 @@ public class RobotTeleop extends OpMode {
         robot.intake.stopTransfer();
         robot.gate.gateClose();
         robot.turret.stopTurret();
+        robot.cargoTracker.clear();
     }
 }

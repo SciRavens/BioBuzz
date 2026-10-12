@@ -27,6 +27,7 @@ public class Robot {
     public Shooter shooter;
     public Turret turret;
     public Gate gate;
+    public VoltageCargoTracker cargoTracker;
 
     public HardwareMap hardwareMap;
     public Telemetry telemetry;
@@ -41,6 +42,7 @@ public class Robot {
         this.shooter = new Shooter(hardwareMap);
         this.turret = new Turret(hardwareMap);
         this.gate = new Gate(hardwareMap, telemetry);
+        this.cargoTracker = new VoltageCargoTracker(hardwareMap, this.intake);
         this.shootTimer = new Timer();
 
         updateAlliance(currentAlliance);
@@ -65,6 +67,10 @@ public class Robot {
         double dx = current_goal_x - follower.pose().x();
         double dy = current_goal_y - follower.pose().y();
         return Math.hypot(dx, dy);
+    }
+
+    public double getBatteryVoltage() {
+        return cargoTracker != null ? cargoTracker.getBatteryVoltage() : 12.0;
     }
 
     public boolean autonShootByDistance(Follower follower, long timeoutMs, double distance) {
