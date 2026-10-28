@@ -19,18 +19,13 @@ public class Intake {
         intakeMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         intakeMotor.setDirection(DcMotorEx.Direction.FORWARD);
 
-        transferMotor = hardwareMap.get(DcMotorEx.class, "transferMotor");
-        transferMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-        transferMotor.setDirection(DcMotorSimple.Direction.FORWARD);
     }
 
     public void startIntakeAndTransfer() {
         intakeMotor.setPower(INTAKE_POWER);
-        transferMotor.setPower(TRANSFER_INTAKE_POWER);
     }
 
     public void startTransferOnly() {
-        transferMotor.setPower(TRANSFER_INTAKE_POWER);
     }
 
     public void startIntakeOnly() {
@@ -39,12 +34,10 @@ public class Intake {
 
     public void shootArtifacts() {
         intakeMotor.setPower(SHOOTING_POWER);
-        transferMotor.setPower(TRANFER_SHOOTING_POWER);
     }
 
     public void intakeStop() {
         intakeMotor.setPower(0);
-        transferMotor.setPower(0);
     }
 
     public void transferOnly() {
@@ -57,7 +50,6 @@ public class Intake {
     }
 
     public void stopTransfer() {
-        transferMotor.setPower(TRANSFER_OFF);
     }
 
     public void feedBalls() {

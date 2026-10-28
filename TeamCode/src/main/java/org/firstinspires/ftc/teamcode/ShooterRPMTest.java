@@ -70,7 +70,7 @@ public class ShooterRPMTest extends OpMode {
 
         if (gamepad2.dpad_up) {
             if (shooterMotor.getVelocity() >= currentRPM) {
-                robot.intake.startTransferOnly();
+                robot.intake.startIntakeOnly();
                 gamepad1.rumble(500);
                 gamepad2.rumble(500);
             }
@@ -78,7 +78,6 @@ public class ShooterRPMTest extends OpMode {
             robot.intake.startIntakeOnly();
         } else {
             robot.intake.stopIntake();
-            robot.intake.stopTransfer();
         }
 
         telemetry.addData("Target RPM", currentRPM);
@@ -92,7 +91,6 @@ public class ShooterRPMTest extends OpMode {
         if (shooterMotor != null) shooterMotor.setVelocity(0);
         if (robot != null) {
             robot.intake.stopIntake();
-            robot.intake.stopTransfer();
         }
     }
 }

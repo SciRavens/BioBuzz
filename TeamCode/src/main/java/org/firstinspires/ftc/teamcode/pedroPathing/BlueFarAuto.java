@@ -99,7 +99,6 @@ public class BlueFarAuto extends OpMode {
             case 2:
                 if (elapsed > 3000) { // decrease if necessary
                     robot.shooter.stopFlyWheel();
-                    robot.intake.stopTransfer();
                     follower.follow(goToThirdPattern());
                     setPathState(21);
                 }
@@ -131,7 +130,6 @@ public class BlueFarAuto extends OpMode {
             case 6:
                 if (elapsed > 3000) {
                     robot.shooter.stopFlyWheel();
-                    robot.intake.stopTransfer();
                     follower.follow(goToSecondPattern());
                     setPathState(61);
                 }
@@ -163,7 +161,6 @@ public class BlueFarAuto extends OpMode {
             case 10:
                 if (elapsed > 2500) {
                     robot.shooter.stopFlyWheel();
-                    robot.intake.stopTransfer();
                     follower.follow(endingAuton());
                     setPathState(11);
                 }
