@@ -49,14 +49,12 @@ public class Shooter {
     }
 
     public DcMotorEx shooterMotor;
-    public RevBlinkinLedDriver shooterLight;
 
     public Shooter(HardwareMap hardwareMap) {
         shooterMotor = hardwareMap.get(DcMotorEx.class, "shooterMotor");
         shooterMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-        shooterMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        shooterMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         shooterMotor.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
-        shooterLight = hardwareMap.get(RevBlinkinLedDriver.class, "shooterLight");
     }
 
     public void startCloseShoot() {
@@ -165,7 +163,6 @@ public class Shooter {
         shooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         currentRPM = shooterOffRPM;
         shooterMotor.setVelocity(shooterOffRPM);
-        shooterLight.setPattern(RevBlinkinLedDriver.BlinkinPattern.WHITE);
     }
 
     public boolean reachedSpeed() {
@@ -189,9 +186,7 @@ public class Shooter {
             return;
         }
         if (reachedSpeed()) {
-            shooterLight.setPattern(RevBlinkinLedDriver.BlinkinPattern.GREEN);
         } else {
-            shooterLight.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
         }
     }
 

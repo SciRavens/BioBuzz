@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import com.pedropathing.math.Pose;
 import com.pedropathing.utils.Angle;
 import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class Turret {
@@ -12,7 +13,7 @@ public class Turret {
         UNKNOWN
     }
 
-    public CRServo turretCR;
+    public DcMotorEx turretCR;
     public static final double TURRET_MANUAL_POWER = 0.45;
     private static final double TURRET_STOP = 0.0;
 
@@ -42,7 +43,7 @@ public class Turret {
     private boolean trackingLost = true;
 
     public Turret(HardwareMap hardwareMap) {
-        turretCR = hardwareMap.get(CRServo.class, "turretServo");
+        turretCR = hardwareMap.get(DcMotorEx.class, "turretMotor");
         turretCR.setPower(TURRET_STOP);
     }
 
