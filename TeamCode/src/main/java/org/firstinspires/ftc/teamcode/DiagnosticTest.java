@@ -10,10 +10,8 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 /**
  * Universal Diagnostic Test OpMode.
  *
- * Allows the driver to cycle through different robot subsystem test modes
- * using button combos on Gamepad 1. Inside each mode, the same set of
- * buttons (A, B, X, Y, bumpers, triggers, sticks) are reused to exercise
- * that subsystem's specific functions.
+ * Allows the driver to cycle through individual subsystem test modes or run
+ * a full TeleOp test using button combos on Gamepad 1.
  *
  * ═══════════════════════════════════════════════════════════════════
  *  MODE SWITCHING  (Gamepad 1 — hold BOTH bumpers + press a face button)
@@ -21,10 +19,10 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
  *   LB + RB + A  →  DRIVETRAIN mode
  *   LB + RB + B  →  SHOOTER mode
  *   LB + RB + X  →  INTAKE mode
- *   LB + RB + Y  →  CARGO TRACKER mode
+ *   LB + RB + Y  →  FULL TELEOP mode (full competition drive + mechanisms)
  *
  * ═══════════════════════════════════════════════════════════════════
- *  CONTROLS INSIDE EACH MODE  (active when mode is selected)
+ *  CONTROLS INSIDE EACH MODE
  * ═══════════════════════════════════════════════════════════════════
  *
  *  [DRIVETRAIN]
@@ -48,12 +46,15 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
  *    Y              — Run intake reverse (−0.75)
  *    X              — STOP intake
  *
- *  [CARGO TRACKER]
- *    A              — Force-add a POLLEN to the queue
- *    B              — Force-add a NECTAR to the queue
- *    X              — Pop from shooter end (FIFO front)
- *    Y              — Clear entire cargo queue
- *    Left Stick Y   — Simulates drivetrain magnitude for voltage update
+ *  [FULL TELEOP]
+ *    Full competition drive & mechanism controls supporting both dual gamepads
+ *    (Gamepad 1 drive + Gamepad 2 mechanisms) and single-gamepad testing.
+ *    - Drive: GP1 Left Stick (xy), GP1 Right Stick (turn), GP1 RT (slow-mode)
+ *    - Shooter: GP2 X (Far), GP2 B (Close), GP2 A (Stop) / GP1 D-Pad (solo)
+ *    - Intake: GP2 LB (Intake), GP2 LT (Reverse) / GP1 LT (solo)
+ *    - Rapid Fire: GP2 Y or GP1 RB (when LB not held)
+ *    - Manual Shoot: GP2 RB
+ *    - Cargo Reset: GP2 or GP1 D-Pad Down
  */
 @TeleOp(name = "Diagnostic Test", group = "Test")
 public class DiagnosticTest extends OpMode {
@@ -63,7 +64,7 @@ public class DiagnosticTest extends OpMode {
         DRIVETRAIN("🚗 DRIVETRAIN"),
         SHOOTER("🎯 SHOOTER"),
         INTAKE("📥 INTAKE"),
-        CARGO_TRACKER("📦 CARGO TRACKER");
+        TELEOP("🎮 FULL TELEOP");
 
         final String label;
         Mode(String label) { this.label = label; }
@@ -76,8 +77,15 @@ public class DiagnosticTest extends OpMode {
     private Robot robot;
     private Timer buttonDebounce;
 
-    // Shooter manual RPM (for D-Pad tuning)
+    // TeleOp / Rapid Fire Timers
+    private Timer rapidTimer;
+    private Timer shootIntervalTimer;
+    private boolean isRapidFireOn = false;
+
+    // Shooter manual RPM (for D-Pad tuning in Shooter Mode)
     private int manualRPM = 970;
+
+    private static final double DEAD_ZONE = 0.1;
 
     // ── Lifecycle ──────────────────────────────────────────────────
     @Override
@@ -90,15 +98,20 @@ public class DiagnosticTest extends OpMode {
         buttonDebounce = new Timer();
         buttonDebounce.reset();
 
+        rapidTimer = new Timer();
+        shootIntervalTimer = new Timer();
+
         telemetry.addLine("═══ DIAGNOSTIC TEST INITIALIZED ═══");
         telemetry.addLine("Hold LB+RB + face button to switch modes:");
-        telemetry.addLine("  A=Drive  B=Shooter  X=Intake  Y=Cargo");
+        telemetry.addLine("  A=Drive  B=Shooter  X=Intake  Y=Full TeleOp");
         telemetry.update();
     }
 
     @Override
     public void start() {
         buttonDebounce.reset();
+        rapidTimer.reset();
+        shootIntervalTimer.reset();
     }
 
     @Override
@@ -112,34 +125,35 @@ public class DiagnosticTest extends OpMode {
             } else if (gamepad1.x) {
                 switchMode(Mode.INTAKE);
             } else if (gamepad1.y) {
-                switchMode(Mode.CARGO_TRACKER);
+                switchMode(Mode.TELEOP);
             }
         }
 
         // ── Dispatch to active mode handler ────────────────────────
         switch (currentMode) {
-            case DRIVETRAIN:    loopDrivetrain();    break;
-            case SHOOTER:       loopShooter();       break;
-            case INTAKE:        loopIntake();        break;
-            case CARGO_TRACKER: loopCargoTracker();  break;
+            case DRIVETRAIN: loopDrivetrain(); break;
+            case SHOOTER:    loopShooter();    break;
+            case INTAKE:     loopIntake();     break;
+            case TELEOP:     loopTeleop();     break;
         }
 
         // ── Common Telemetry Header ────────────────────────────────
         telemetry.addLine("═══════════════════════════════════");
         telemetry.addData("▶ ACTIVE MODE", currentMode.label);
-        telemetry.addLine("Switch: hold LB+RB + A/B/X/Y");
+        telemetry.addLine("Switch Mode: hold LB+RB + A/B/X/Y");
         telemetry.addLine("═══════════════════════════════════");
     }
 
     // ── Mode Switching Helper ──────────────────────────────────────
     private void switchMode(Mode newMode) {
-        // Stop everything when switching modes for safety
         stopAllSubsystems();
+        isRapidFireOn = false;
         currentMode = newMode;
         buttonDebounce.reset();
 
-        // Rumble to confirm mode switch
+        // Haptic feedback to confirm switch
         gamepad1.rumble(200);
+        gamepad2.rumble(200);
     }
 
     private void stopAllSubsystems() {
@@ -150,20 +164,19 @@ public class DiagnosticTest extends OpMode {
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  DRIVETRAIN MODE
+    //  1. DRIVETRAIN MODE
     // ════════════════════════════════════════════════════════════════
     private void loopDrivetrain() {
-        double deadzone = 0.1;
-        double xInput = Math.abs(gamepad1.left_stick_x) > deadzone ? -gamepad1.left_stick_x : 0;
-        double yInput = Math.abs(gamepad1.left_stick_y) > deadzone ? -gamepad1.left_stick_y : 0;
-        double turnInput = Math.abs(gamepad1.right_stick_x) > deadzone ? -gamepad1.right_stick_x : 0;
+        double xInput = Math.abs(gamepad1.left_stick_x) > DEAD_ZONE ? -gamepad1.left_stick_x : 0;
+        double yInput = Math.abs(gamepad1.left_stick_y) > DEAD_ZONE ? -gamepad1.left_stick_y : 0;
+        double turnInput = Math.abs(gamepad1.right_stick_x) > DEAD_ZONE ? -gamepad1.right_stick_x : 0;
 
         double scale = gamepad1.right_trigger > 0.5 ? 0.25 : 1.0;
 
         follower.manual(yInput * scale, xInput * scale, turnInput * scale);
         follower.update();
 
-        // A = reset pose
+        // A = reset pose (when not in mode-switch combo)
         if (gamepad1.a && !gamepad1.left_bumper && buttonDebounce.milliseconds() > 400) {
             follower.setPose(new Pose(0, 0, 0));
             buttonDebounce.reset();
@@ -179,10 +192,10 @@ public class DiagnosticTest extends OpMode {
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  SHOOTER MODE
+    //  2. SHOOTER MODE
     // ════════════════════════════════════════════════════════════════
     private void loopShooter() {
-        // Don't process face buttons if bumpers are held (mode switching)
+        // Face button presets (when not mode switching)
         if (!gamepad1.left_bumper) {
             if (gamepad1.a) {
                 manualRPM = robot.shooter.shooterCloseRPM;
@@ -199,7 +212,7 @@ public class DiagnosticTest extends OpMode {
             }
         }
 
-        // D-Pad RPM tuning (debounced)
+        // D-Pad RPM tuning
         if (buttonDebounce.milliseconds() > 200) {
             if (gamepad1.dpad_up) {
                 manualRPM += 25;
@@ -231,7 +244,7 @@ public class DiagnosticTest extends OpMode {
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  INTAKE MODE
+    //  3. INTAKE MODE
     // ════════════════════════════════════════════════════════════════
     private void loopIntake() {
         if (!gamepad1.left_bumper) {
@@ -268,35 +281,115 @@ public class DiagnosticTest extends OpMode {
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  CARGO TRACKER MODE
+    //  4. FULL TELEOP MODE
     // ════════════════════════════════════════════════════════════════
-    private void loopCargoTracker() {
-        // Simulate voltage tracker update with left stick as fake drivetrain magnitude
-        double fakeDrive = Math.abs(gamepad1.left_stick_y);
-        robot.cargoTracker.update(fakeDrive);
-
-        if (!gamepad1.left_bumper && buttonDebounce.milliseconds() > 400) {
-            if (gamepad1.a) {
-                robot.cargoTracker.addCargo(VoltageCargoTracker.CargoType.POLLEN);
-                buttonDebounce.reset();
-            } else if (gamepad1.b) {
-                robot.cargoTracker.addCargo(VoltageCargoTracker.CargoType.NECTAR);
-                buttonDebounce.reset();
+    private void loopTeleop() {
+        // ── Alliance Toggle (GP1 Y / X without holding LB) ────────
+        if (!gamepad1.left_bumper) {
+            if (gamepad1.y) {
+                Robot.updateAlliance("BLUE");
             } else if (gamepad1.x) {
-                robot.cargoTracker.popShooterCargo();
-                buttonDebounce.reset();
-            } else if (gamepad1.y) {
-                robot.cargoTracker.clear();
-                buttonDebounce.reset();
+                Robot.updateAlliance("RED");
             }
         }
 
-        telemetry.addLine("── Cargo Tracker Controls ──");
-        telemetry.addLine("  A: +Pollen  B: +Nectar");
-        telemetry.addLine("  X: Pop(shoot end)  Y: Clear All");
-        telemetry.addLine("  Left Stick Y: Simulate drive magnitude");
+        // ── Drivetrain (Pedro 3 Manual Drive) ──────────────────────
+        double xInput = Math.abs(gamepad1.left_stick_x) > DEAD_ZONE ? -gamepad1.left_stick_x : 0;
+        double yInput = Math.abs(gamepad1.left_stick_y) > DEAD_ZONE ? -gamepad1.left_stick_y : 0;
+        double turnInput = Math.abs(gamepad1.right_stick_x) > DEAD_ZONE ? -gamepad1.right_stick_x : 0;
+
+        double powerScale = gamepad1.right_trigger > 0.5 ? 0.25 : 1.0;
+
+        follower.manual(yInput * powerScale, xInput * powerScale, turnInput * powerScale);
+        follower.update();
+
+        Pose currentPose = follower.pose();
+        double distanceToGoal = robot.getDistanceFromGoal(follower);
+
+        // ── Voltage Cargo Tracker ──────────────────────────────────
+        double drivetrainMagnitude = (Math.abs(xInput) + Math.abs(yInput) + Math.abs(turnInput)) * powerScale;
+        robot.cargoTracker.update(drivetrainMagnitude);
+
+        if (robot.cargoTracker.checkAndClearFullCapacityAlert()) {
+            gamepad1.rumble(300);
+            gamepad2.rumble(300);
+        }
+
+        if (gamepad2.dpad_down || (!gamepad1.left_bumper && gamepad1.dpad_down)) {
+            robot.cargoTracker.clear();
+        }
+
+        // ── Shooter Controls (GP2 primary, GP1 fallback for solo) ──
+        if (gamepad2.x || (!gamepad1.left_bumper && gamepad1.dpad_up)) {
+            robot.shooter.startFarShoot();
+        } else if ((gamepad2.b && !isRapidFireOn) || (!gamepad1.left_bumper && gamepad1.dpad_right)) {
+            robot.shooter.startCloseShoot();
+        } else if (gamepad2.a || (!gamepad1.left_bumper && gamepad1.dpad_left)) {
+            robot.shooter.stopShoot();
+        } else if (gamepad1.a && !gamepad1.left_bumper) {
+            robot.shooter.startHumanIntake();
+        }
+
+        // ── Intake Controls ────────────────────────────────────────
+        boolean gp1SoloIntake = !gamepad1.left_bumper && gamepad1.left_trigger > 0.5;
+        boolean gp1SoloReverse = gamepad1.left_bumper && !gamepad1.right_bumper;
+
+        if (gamepad2.left_bumper || gp1SoloIntake) {
+            robot.intake.startIntakeOnly();
+        } else if (gamepad2.left_trigger > 0.5 || gp1SoloReverse) {
+            robot.intake.startReverseIntake();
+        } else if (!isRapidFireOn && !gamepad2.right_bumper) {
+            robot.intake.stopIntake();
+        }
+
+        // ── Rapid Fire (GP2 Y or GP1 RB when LB not held) ─────────
+        boolean triggerRapid = gamepad2.y || (gamepad1.right_bumper && !gamepad1.left_bumper);
+        if (triggerRapid && !isRapidFireOn) {
+            isRapidFireOn = true;
+            robot.shooter.startMidShoot();
+            rapidTimer.reset();
+        }
+
+        if (isRapidFireOn) {
+            if (robot.shooter.reachedSpeed()) {
+                robot.intake.shootArtifacts();
+                if (shootIntervalTimer.milliseconds() > 450 && !robot.cargoTracker.isEmpty()) {
+                    robot.cargoTracker.popShooterCargo();
+                    shootIntervalTimer.reset();
+                }
+                gamepad1.rumble(500);
+                gamepad2.rumble(500);
+            }
+            if (rapidTimer.milliseconds() >= 5750) {
+                robot.shooter.stopFlyWheel();
+                robot.intake.intakeStop();
+                robot.cargoTracker.clear();
+                isRapidFireOn = false;
+            }
+        } else {
+            // Manual Trigger Shooting (GP2 RB)
+            if (gamepad2.right_bumper) {
+                if (robot.shooter.reachedSpeed()) {
+                    robot.intake.shootArtifacts();
+                    if (shootIntervalTimer.milliseconds() > 450 && !robot.cargoTracker.isEmpty()) {
+                        robot.cargoTracker.popShooterCargo();
+                        shootIntervalTimer.reset();
+                    }
+                    gamepad1.rumble(500);
+                    gamepad2.rumble(500);
+                }
+            }
+        }
+
+        // ── Telemetry ──────────────────────────────────────────────
+        robot.shooter.shooterLightUpdate();
         robot.cargoTracker.addTelemetry(telemetry);
-        telemetry.addData("Battery Voltage", "%.2f V", robot.getBatteryVoltage());
+        telemetry.addData("Alliance", Robot.currentAlliance);
+        telemetry.addData("Rapid Fire Active", isRapidFireOn);
+        telemetry.addData("Goal Distance", "%.1f in", distanceToGoal);
+        telemetry.addData("Flywheel Velocity", "%.1f RPM", robot.shooter.shooterMotor.getVelocity());
+        telemetry.addData("Intake Power", "%.2f", robot.intake.intakeMotor.getPower());
+        telemetry.addData("Pose", "(%.1f, %.1f) @ %.1f°", currentPose.x(), currentPose.y(), Math.toDegrees(currentPose.heading()));
         telemetry.update();
     }
 
