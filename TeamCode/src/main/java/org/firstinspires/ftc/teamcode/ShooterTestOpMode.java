@@ -42,7 +42,7 @@ public class ShooterTestOpMode extends OpMode {
         telemetry.addLine("=== SHOOTER TEST OPMODE INITIALIZED ===");
         telemetry.addData("Default Target RPM", currentRPM);
         telemetry.addLine("Controls (Gamepad 1):");
-        telemetry.addLine("  LB (hold)  : Intake + Transfer ON");
+        telemetry.addLine("  LB (hold)  : Intake ON");
         telemetry.addLine("  LT (hold)  : Reverse Intake (Clear Jam)");
         telemetry.addLine("  RB (hold)  : Spin Up Shooter Flywheel");
         telemetry.addLine("  RT (hold)  : SHOOT (Feed ball into flywheel)");
@@ -90,10 +90,10 @@ public class ShooterTestOpMode extends OpMode {
                 // Right trigger fires: feed balls into flywheel with shootArtifacts
                 if (gamepad1.right_trigger > 0.5) {
                     if (isAtSpeed()) {
-                        intake.shootArtifacts(); // intake 0.5, transfer -0.75
+                        intake.shootArtifacts(); // intake 0.5 feeds into flywheel
                     }
                 } else if (!gamepad1.left_bumper && gamepad1.left_trigger <= 0.5) {
-                    // RT not pressed and intake buttons not pressed -> stop intake/transfer
+                    // RT not pressed and intake buttons not pressed -> stop intake
                     intake.intakeStop();
                 }
             } else {
@@ -103,11 +103,11 @@ public class ShooterTestOpMode extends OpMode {
 
             // 5. Intake Controls (when not actively shooting)
             if (gamepad1.left_bumper) {
-                intake.startIntakeAndTransfer(); // intake 0.75, transfer -0.4
+                intake.startIntake();            // intake 0.75
             } else if (gamepad1.left_trigger > 0.5) {
                 intake.startReverseIntake();     // intake -0.75
             } else if (!gamepad1.right_bumper || gamepad1.right_trigger <= 0.5) {
-                // If neither intaking nor shooting, stop intake & transfer
+                // If neither intaking nor shooting, stop intake
                 intake.intakeStop();
             }
         }
@@ -118,7 +118,7 @@ public class ShooterTestOpMode extends OpMode {
         telemetry.addData("Actual Velocity", "%.1f RPM", shooterMotor.getVelocity());
         telemetry.addData("Flywheel At Speed?", isAtSpeed() ? "READY" : "SPINNING UP");
         telemetry.addData("Shooter Motor Power", "%.2f", shooterMotor.getPower());
-        telemetry.addLine("=== INTAKE / TRANSFER STATUS ===");
+        telemetry.addLine("=== INTAKE STATUS ===");
         telemetry.addData("Intake Motor Power", "%.2f", intake.intakeMotor.getPower());
         telemetry.addLine("=== CONTROLS ===");
         telemetry.addLine("LB: Intake | LT: Rev Intake | RB: Spin | RT: Shoot");

@@ -100,7 +100,7 @@ public class RedFarAuto extends OpMode {
             case 2:
                 if (elapsed > 3000) {
                     robot.shooter.stopFlyWheel();
-                    robot.intake.stopTransfer();
+                    robot.intake.stopIntake();
                     follower.follow(goToThirdPattern());
                     setPathState(21);
                 }
@@ -132,7 +132,7 @@ public class RedFarAuto extends OpMode {
             case 6:
                 if (elapsed > 3000) {
                     robot.shooter.stopFlyWheel();
-                    robot.intake.stopTransfer();
+                    robot.intake.stopIntake();
                     follower.follow(goToSecondPattern());
                     setPathState(61);
                 }
@@ -164,7 +164,7 @@ public class RedFarAuto extends OpMode {
             case 10:
                 if (elapsed > 2500) {
                     robot.shooter.stopFlyWheel();
-                    robot.intake.stopTransfer();
+                    robot.intake.stopIntake();
                     follower.follow(endingAuton());
                     setPathState(11);
                 }

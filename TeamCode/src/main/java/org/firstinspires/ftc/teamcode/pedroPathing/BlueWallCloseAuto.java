@@ -95,7 +95,7 @@ public class BlueWallCloseAuto extends OpMode {
                 break;
             case 1:
                 if (robot.shooter.reachedSpeed() || elapsed > 4000) {
-                    robot.intake.startIntakeAndTransfer();
+                    robot.intake.shootArtifacts();
                     robot.gate.gateOpen();
                     setPathState(2);
                 }
@@ -103,8 +103,7 @@ public class BlueWallCloseAuto extends OpMode {
             case 2:
                 if (elapsed > 2000) {
                     robot.shooter.stopShoot();
-                    robot.intake.stopTransfer();
-                    robot.intake.startIntakeOnly();
+                    robot.intake.startIntake();
                     robot.gate.gateClose();
                     setPathState(3);
                 }
@@ -124,7 +123,7 @@ public class BlueWallCloseAuto extends OpMode {
                 break;
             case 5:
                 if (!follower.isBusy() || elapsed > 4000) {
-                    robot.intake.startIntakeAndTransfer();
+                    robot.intake.shootArtifacts();
                     robot.gate.gateOpen();
                     setPathState(6);
                 }
@@ -132,8 +131,7 @@ public class BlueWallCloseAuto extends OpMode {
             case 6:
                 if (elapsed > 2000) {
                     robot.shooter.stopShoot();
-                    robot.intake.stopTransfer();
-                    robot.intake.startIntakeOnly();
+                    robot.intake.startIntake();
                     robot.gate.gateClose();
                     setPathState(7);
                 }
@@ -153,7 +151,7 @@ public class BlueWallCloseAuto extends OpMode {
                 break;
             case 9:
                 if (!follower.isBusy() || elapsed > 4000) {
-                    robot.intake.startIntakeAndTransfer();
+                    robot.intake.shootArtifacts();
                     robot.gate.gateOpen();
                     setPathState(10);
                 }
@@ -161,8 +159,7 @@ public class BlueWallCloseAuto extends OpMode {
             case 10:
                 if (elapsed > 2000) {
                     robot.shooter.stopShoot();
-                    robot.intake.stopTransfer();
-                    robot.intake.startIntakeOnly();
+                    robot.intake.startIntake();
                     robot.gate.gateClose();
                     setPathState(11);
                 }
@@ -182,7 +179,7 @@ public class BlueWallCloseAuto extends OpMode {
                 break;
             case 13:
                 if (!follower.isBusy() || (elapsed > 4000 && robot.shooter.reachedSpeed())) {
-                    robot.intake.startIntakeAndTransfer();
+                    robot.intake.shootArtifacts();
                     robot.gate.gateOpen();
                     setPathState(14);
                 }
@@ -191,7 +188,6 @@ public class BlueWallCloseAuto extends OpMode {
                 if (elapsed > 4000) {
                     robot.shooter.stopShoot();
                     robot.intake.stopIntake();
-                    robot.intake.stopTransfer();
                     robot.gate.gateClose();
                     setPathState(-1);
                 }

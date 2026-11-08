@@ -125,7 +125,7 @@ public class RobotTeleop extends OpMode {
             robot.gate.gateOpen();
         }
 
-        // ------------------ RAPID FIRE & TRANSFER ------------------
+        // ------------------ RAPID FIRE ------------------
         // Mid-Range Rapid Fire (gamepad2.y)
         if (gamepad2.y && !isRapidFireOn) {
             isRapidFireOn = true;
@@ -149,7 +149,6 @@ public class RobotTeleop extends OpMode {
             if (rapidTimer.milliseconds() >= 5750) {
                 robot.shooter.stopFlyWheel();
                 robot.intake.intakeStop();
-                robot.intake.stopTransfer();
                 robot.gate.gateClose();
                 robot.cargoTracker.clear();
                 isRapidFireOn = false;
@@ -158,7 +157,7 @@ public class RobotTeleop extends OpMode {
             // Manual Trigger Shooting (gamepad2.right_bumper)
             if (gamepad2.right_bumper) {
                 if (robot.shooter.reachedSpeed()) {
-                    robot.intake.startTransferOnly();
+                    robot.intake.shootArtifacts();
                     robot.gate.gateOpen();
                     if (shootIntervalTimer.milliseconds() > 450 && !robot.cargoTracker.isEmpty()) {
                         robot.cargoTracker.popShooterCargo();
@@ -168,7 +167,9 @@ public class RobotTeleop extends OpMode {
                     gamepad2.rumble(500);
                 }
             } else {
-                robot.intake.stopTransfer();
+                if (!gamepad2.left_bumper && gamepad2.left_trigger <= 0.5) {
+                    robot.intake.stopIntake();
+                }
                 if (!gamepad1.left_bumper) {
                     robot.gate.gateClose();
                 }
@@ -190,7 +191,6 @@ public class RobotTeleop extends OpMode {
     public void stop() {
         robot.shooter.stopShoot();
         robot.intake.stopIntake();
-        robot.intake.stopTransfer();
         robot.gate.gateClose();
         robot.turret.stopTurret();
         robot.cargoTracker.clear();
