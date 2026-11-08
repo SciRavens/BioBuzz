@@ -9,8 +9,8 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 /**
  * Standard Robot TeleOp for FTC using Pedro Pathing 3.
- * Handles robot driving, shooter motor control, gate control, rapid fire sequences,
- * and automated Limelight 3A turret tracking with manual D-Pad override.
+ * Handles robot driving, shooter motor control, intake, rapid fire sequences,
+ * and voltage-based cargo tracking.
  */
 @TeleOp(name = "RobotTeleop", group = "Competition")
 public class RobotTeleop extends OpMode {
@@ -21,7 +21,6 @@ public class RobotTeleop extends OpMode {
 
     private Follower follower;
     private Robot robot;
-    private TurretTracker turretTracker;
 
     private static final double DEAD_ZONE = 0.1;
     private boolean isRapidFireOn = false;
@@ -43,10 +42,8 @@ public class RobotTeleop extends OpMode {
         }
 
         robot = new Robot(hardwareMap, telemetry);
-        turretTracker = new TurretTracker(robot);
-        turretTracker.start();
 
-        telemetry.addLine("RobotTeleop Initialized - Pedro Pathing 3 & TurretTracker");
+        telemetry.addLine("RobotTeleop Initialized - Pedro Pathing 3");
         telemetry.addData("Alliance", Robot.currentAlliance);
         telemetry.update();
     }
@@ -94,10 +91,6 @@ public class RobotTeleop extends OpMode {
             robot.cargoTracker.clear();
         }
 
-        // ------------------ TURRET TRACKING & MANUAL OVERRIDE ------------------
-        // Pressing D-Pad Left or Right overrides auto-tracking immediately
-        turretTracker.update(currentPose, gamepad2.dpad_left, gamepad2.dpad_right);
-
         // ------------------ SHOOTER CONTROLS ------------------
         if (gamepad2.x) {
             robot.shooter.startFarShoot();
@@ -112,17 +105,10 @@ public class RobotTeleop extends OpMode {
         // ------------------ INTAKE CONTROLS ------------------
         if (gamepad2.left_bumper) {
             robot.intake.startIntakeOnly();
-            robot.gate.gateClose();
         } else if (gamepad2.left_trigger > 0.5) {
             robot.intake.startReverseIntake();
-            robot.gate.gateClose();
         } else if (!isRapidFireOn && !gamepad2.right_bumper) {
             robot.intake.stopIntake();
-        }
-
-        // ------------------ GATE MANUAL CONTROL ------------------
-        if (gamepad1.left_bumper) {
-            robot.gate.gateOpen();
         }
 
         // ------------------ RAPID FIRE ------------------
@@ -130,7 +116,6 @@ public class RobotTeleop extends OpMode {
         if (gamepad2.y && !isRapidFireOn) {
             isRapidFireOn = true;
             robot.shooter.startMidShoot();
-            robot.gate.gateOpen();
             rapidTimer.reset();
         }
 
@@ -138,7 +123,6 @@ public class RobotTeleop extends OpMode {
         if (isRapidFireOn) {
             if (robot.shooter.reachedSpeed()) {
                 robot.intake.shootArtifacts();
-                robot.gate.gateOpen();
                 if (shootIntervalTimer.milliseconds() > 450 && !robot.cargoTracker.isEmpty()) {
                     robot.cargoTracker.popShooterCargo();
                     shootIntervalTimer.reset();
@@ -149,7 +133,6 @@ public class RobotTeleop extends OpMode {
             if (rapidTimer.milliseconds() >= 5750) {
                 robot.shooter.stopFlyWheel();
                 robot.intake.intakeStop();
-                robot.gate.gateClose();
                 robot.cargoTracker.clear();
                 isRapidFireOn = false;
             }
@@ -158,7 +141,6 @@ public class RobotTeleop extends OpMode {
             if (gamepad2.right_bumper) {
                 if (robot.shooter.reachedSpeed()) {
                     robot.intake.shootArtifacts();
-                    robot.gate.gateOpen();
                     if (shootIntervalTimer.milliseconds() > 450 && !robot.cargoTracker.isEmpty()) {
                         robot.cargoTracker.popShooterCargo();
                         shootIntervalTimer.reset();
@@ -170,9 +152,6 @@ public class RobotTeleop extends OpMode {
                 if (!gamepad2.left_bumper && gamepad2.left_trigger <= 0.5) {
                     robot.intake.stopIntake();
                 }
-                if (!gamepad1.left_bumper) {
-                    robot.gate.gateClose();
-                }
             }
         }
 
@@ -182,7 +161,6 @@ public class RobotTeleop extends OpMode {
         telemetry.addData("Alliance", Robot.currentAlliance);
         telemetry.addData("Rapid Fire Active", isRapidFireOn);
         telemetry.addData("Goal Distance", "%.1f in", distanceToGoal);
-        telemetry.addData("Gate", robot.gate.isGateClosed() ? "CLOSED" : "OPEN");
         telemetry.addData("Pose", "(%.1f, %.1f) @ %.1f°", currentPose.x(), currentPose.y(), Math.toDegrees(currentPose.heading()));
         telemetry.update();
     }
@@ -191,8 +169,6 @@ public class RobotTeleop extends OpMode {
     public void stop() {
         robot.shooter.stopShoot();
         robot.intake.stopIntake();
-        robot.gate.gateClose();
-        robot.turret.stopTurret();
         robot.cargoTracker.clear();
     }
 }

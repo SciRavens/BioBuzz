@@ -25,8 +25,6 @@ public class Robot {
 
     public Intake intake;
     public Shooter shooter;
-    public Turret turret;
-    public Gate gate;
     public VoltageCargoTracker cargoTracker;
 
     public HardwareMap hardwareMap;
@@ -40,8 +38,6 @@ public class Robot {
         this.telemetry = telemetry;
         this.intake = new Intake(hardwareMap);
         this.shooter = new Shooter(hardwareMap);
-        this.turret = new Turret(hardwareMap);
-        this.gate = new Gate(hardwareMap, telemetry);
         this.cargoTracker = new VoltageCargoTracker(hardwareMap, this.intake);
         this.shootTimer = new Timer();
 
@@ -74,7 +70,6 @@ public class Robot {
     }
 
     public boolean autonShootByDistance(Follower follower, long timeoutMs, double distance) {
-        gate.gateOpen();
         shooter.startShooterByDistance(distance);
 
         if (isAutonShootTimerOn) {
@@ -93,7 +88,6 @@ public class Robot {
 
         if (isAutonShootTimerOn && shootTimer.milliseconds() > timeoutMs) {
             intake.stopFeeding();
-            gate.gateClose();
             isAutonShootTimerOn = false;
             return true;
         }
@@ -101,7 +95,6 @@ public class Robot {
     }
 
     public boolean autonRapidShootByDistance(Follower follower, long timeoutMs, double distance) {
-        gate.gateOpen();
         shooter.startAutoCloseBlueShoot();
 
         if (isAutonShootTimerOn) {
@@ -116,7 +109,6 @@ public class Robot {
 
         if (isAutonShootTimerOn && shootTimer.milliseconds() > timeoutMs) {
             intake.stopFeeding();
-            gate.gateClose();
             isAutonShootTimerOn = false;
             return true;
         }
@@ -132,7 +124,6 @@ public class Robot {
     }
 
     public boolean TeleOpRapidShoot(Follower follower, long timeoutMs, double distance) {
-        gate.gateOpen();
         shooter.startShooterByDistance(distance);
         if (shooter.reachedSpeed() && !isAutonShootTimerOn) {
             if (telemetry != null) telemetry.addLine("TeleOp Rapid Shoot On");
@@ -144,7 +135,6 @@ public class Robot {
         if (isAutonShootTimerOn && shootTimer.milliseconds() > timeoutMs) {
             if (telemetry != null) telemetry.addLine("TeleOp Rapid Shoot Off");
             intake.stopIntake();
-            gate.gateClose();
             isAutonShootTimerOn = false;
             return true;
         }

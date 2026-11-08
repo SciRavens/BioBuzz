@@ -96,7 +96,6 @@ public class RedWallCloseAuto extends OpMode {
             case 1:
                 if (robot.shooter.reachedSpeed() || elapsed > 4000) {
                     robot.intake.shootArtifacts();
-                    robot.gate.gateOpen();
                     setPathState(2);
                 }
                 break;
@@ -104,7 +103,6 @@ public class RedWallCloseAuto extends OpMode {
                 if (elapsed > 2000) {
                     robot.shooter.stopShoot();
                     robot.intake.startIntake();
-                    robot.gate.gateClose();
                     setPathState(3);
                 }
                 break;
@@ -124,7 +122,6 @@ public class RedWallCloseAuto extends OpMode {
             case 5:
                 if (!follower.isBusy() || elapsed > 4000) {
                     robot.intake.shootArtifacts();
-                    robot.gate.gateOpen();
                     setPathState(6);
                 }
                 break;
@@ -132,7 +129,6 @@ public class RedWallCloseAuto extends OpMode {
                 if (elapsed > 2000) {
                     robot.shooter.stopShoot();
                     robot.intake.startIntake();
-                    robot.gate.gateClose();
                     setPathState(7);
                 }
                 break;
@@ -152,7 +148,6 @@ public class RedWallCloseAuto extends OpMode {
             case 9:
                 if (!follower.isBusy() || elapsed > 4000) {
                     robot.intake.shootArtifacts();
-                    robot.gate.gateOpen();
                     setPathState(10);
                 }
                 break;
@@ -160,7 +155,6 @@ public class RedWallCloseAuto extends OpMode {
                 if (elapsed > 2000) {
                     robot.shooter.stopShoot();
                     robot.intake.startIntake();
-                    robot.gate.gateClose();
                     setPathState(11);
                 }
                 break;
@@ -180,7 +174,6 @@ public class RedWallCloseAuto extends OpMode {
             case 13:
                 if (!follower.isBusy() || (elapsed > 4000 && robot.shooter.reachedSpeed())) {
                     robot.intake.shootArtifacts();
-                    robot.gate.gateOpen();
                     setPathState(14);
                 }
                 break;
@@ -188,7 +181,6 @@ public class RedWallCloseAuto extends OpMode {
                 if (elapsed > 4000) {
                     robot.shooter.stopShoot();
                     robot.intake.stopIntake();
-                    robot.gate.gateClose();
                     setPathState(-1);
                 }
                 break;
