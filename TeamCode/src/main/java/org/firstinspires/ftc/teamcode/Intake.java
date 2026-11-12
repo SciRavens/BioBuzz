@@ -10,9 +10,11 @@ public class Intake {
     private final double INTAKE_OFF = 0.0;
 
     public Intake(HardwareMap hardwareMap) {
-        intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
-        intakeMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-        intakeMotor.setDirection(DcMotorEx.Direction.FORWARD);
+        if (hardwareMap != null) {
+            intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
+            intakeMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+            intakeMotor.setDirection(DcMotorEx.Direction.FORWARD);
+        }
     }
 
     public void startIntake() {
