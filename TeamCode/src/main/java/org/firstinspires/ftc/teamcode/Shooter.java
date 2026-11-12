@@ -51,10 +51,12 @@ public class Shooter {
     public DcMotorEx shooterMotor;
 
     public Shooter(HardwareMap hardwareMap) {
-        shooterMotor = hardwareMap.get(DcMotorEx.class, "shooterMotor");
-        shooterMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-        shooterMotor.setDirection(DcMotorSimple.Direction.REVERSE);
-        shooterMotor.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        if (hardwareMap != null) {
+            shooterMotor = hardwareMap.get(DcMotorEx.class, "shooterMotor");
+            shooterMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+            shooterMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+            shooterMotor.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        }
     }
 
     public void startCloseShoot() {
