@@ -14,6 +14,8 @@ import com.pedropathing.revhub.drivetrains.MecanumConfig;
 import com.pedropathing.revhub.localizers.PinpointConfig;
 import com.pedropathing.revhub.localizers.PinpointLocalizer;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -67,6 +69,19 @@ public class Constants {
     });
 
     public static Drivetrain createDrivetrain(HardwareMap hardwareMap) {
+        if (hardwareMap != null) {
+            try {
+                DcMotorEx fl = hardwareMap.get(DcMotorEx.class, "leftFront");
+                DcMotorEx fr = hardwareMap.get(DcMotorEx.class, "rightFront");
+                DcMotorEx bl = hardwareMap.get(DcMotorEx.class, "leftRear");
+                DcMotorEx br = hardwareMap.get(DcMotorEx.class, "rightRear");
+
+                for (DcMotorEx motor : new DcMotorEx[]{fl, fr, bl, br}) {
+                    motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+                }
+            } catch (Exception ignored) {}
+        }
         return new Mecanum(hardwareMap, mecanumConfig);
     }
 

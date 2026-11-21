@@ -9,13 +9,15 @@ public class DiagnosticLogicTest {
 
     @Test
     public void testDiagnosticModesEnum() {
-        // Verify all 4 modes exist with correct labels
+        // Verify all 6 modes exist with correct labels
         DiagnosticTest.Mode[] modes = DiagnosticTest.Mode.values();
-        assertEquals(4, modes.length);
+        assertEquals(6, modes.length);
         assertEquals("[1] DRIVETRAIN", DiagnosticTest.Mode.DRIVETRAIN.label);
         assertEquals("[2] SHOOTER", DiagnosticTest.Mode.SHOOTER.label);
         assertEquals("[3] INTAKE", DiagnosticTest.Mode.INTAKE.label);
-        assertEquals("[4] FULL TELEOP", DiagnosticTest.Mode.TELEOP.label);
+        assertEquals("[4] TURRET", DiagnosticTest.Mode.TURRET.label);
+        assertEquals("[5] GATE", DiagnosticTest.Mode.GATE.label);
+        assertEquals("[6] FULL TELEOP", DiagnosticTest.Mode.TELEOP.label);
     }
 
     @Test
@@ -150,5 +152,33 @@ public class DiagnosticLogicTest {
         assertEquals(970, shooter.shooterCloseRPM);
         assertEquals(1050, shooter.autonMidRPM);
         assertEquals(1375, shooter.shooterFarRPM);
+    }
+
+    @Test
+    public void testTurretNullSafetyAndDefaults() {
+        Turret turret = new Turret(null);
+        assertNull(turret.turretMotor);
+        assertEquals(0.0, turret.getPower(), 1e-4);
+        assertEquals(0.0, turret.getVelocity(), 1e-4);
+        assertEquals(0, turret.getCurrentPosition());
+        assertEquals(0.0, turret.getCurrentAmps(), 1e-4);
+
+        turret.turnClockwise();
+        assertEquals(Turret.DEFAULT_TURRET_POWER, turret.getPower(), 1e-4);
+
+        turret.turnCounterClockwise();
+        assertEquals(-Turret.DEFAULT_TURRET_POWER, turret.getPower(), 1e-4);
+
+        turret.turn(0.75);
+        assertEquals(0.75, turret.getPower(), 1e-4);
+
+        // Power clipping [-1.0, 1.0]
+        turret.turn(2.0);
+        assertEquals(1.0, turret.getPower(), 1e-4);
+        turret.turn(-1.5);
+        assertEquals(-1.0, turret.getPower(), 1e-4);
+
+        turret.stop();
+        assertEquals(0.0, turret.getPower(), 1e-4);
     }
 }

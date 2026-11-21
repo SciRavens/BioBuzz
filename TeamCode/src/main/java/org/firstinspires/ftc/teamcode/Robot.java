@@ -25,7 +25,9 @@ public class Robot {
 
     public Intake intake;
     public Shooter shooter;
+    public Turret turret;
     public VoltageCargoTracker cargoTracker;
+    public Gate gate;
 
     public HardwareMap hardwareMap;
     public Telemetry telemetry;
@@ -38,7 +40,9 @@ public class Robot {
         this.telemetry = telemetry;
         this.intake = new Intake(hardwareMap);
         this.shooter = new Shooter(hardwareMap);
+        this.turret = new Turret(hardwareMap);
         this.cargoTracker = new VoltageCargoTracker(hardwareMap, this.intake);
+        this.gate = new Gate(hardwareMap);
         this.shootTimer = new Timer();
 
         updateAlliance(currentAlliance);
