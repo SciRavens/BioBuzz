@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class Intake {
     public DcMotorEx intakeMotor;
-    private final double INTAKE_POWER = 0.75;
+    private final double INTAKE_POWER = 1.0;
     private final double SHOOTING_POWER = 0.5;
     private final double INTAKE_OFF = 0.0;
 
@@ -13,7 +13,7 @@ public class Intake {
         if (hardwareMap != null) {
             intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
             intakeMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-            intakeMotor.setDirection(DcMotorEx.Direction.FORWARD);
+            intakeMotor.setDirection(DcMotorEx.Direction.REVERSE);
         }
     }
 
@@ -22,7 +22,7 @@ public class Intake {
     }
 
     public void startIntakeOnly() {
-        startIntake();
+        intakeMotor.setPower(INTAKE_POWER);
     }
 
     public void shootArtifacts() {

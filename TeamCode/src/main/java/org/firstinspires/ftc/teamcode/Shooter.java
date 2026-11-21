@@ -54,7 +54,7 @@ public class Shooter {
         if (hardwareMap != null) {
             shooterMotor = hardwareMap.get(DcMotorEx.class, "shooterMotor");
             shooterMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-            shooterMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+            shooterMotor.setDirection(DcMotorSimple.Direction.FORWARD);
             shooterMotor.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         }
     }

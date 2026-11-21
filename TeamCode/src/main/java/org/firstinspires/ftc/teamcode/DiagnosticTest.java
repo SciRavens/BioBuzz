@@ -14,12 +14,14 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
  * a full TeleOp test using button combos on Gamepad 1.
  *
  * ═══════════════════════════════════════════════════════════════════
- *  MODE SWITCHING  (Gamepad 1 — hold BOTH bumpers + press face button)
+ *  MODE SWITCHING  (Gamepad 1 — hold BOTH bumpers + press button)
  * ═══════════════════════════════════════════════════════════════════
- *   LB + RB + A  →  [1] DRIVETRAIN mode
- *   LB + RB + B  →  [2] SHOOTER mode
- *   LB + RB + X  →  [3] INTAKE mode
- *   LB + RB + Y  →  [4] FULL TELEOP mode
+ *   LB + RB + A       →  [1] DRIVETRAIN mode
+ *   LB + RB + B       →  [2] SHOOTER mode
+ *   LB + RB + X       →  [3] INTAKE mode
+ *   LB + RB + Y       →  [4] TURRET mode
+ *   LB + RB + D-pad Down → [5] GATE mode
+ *   LB + RB + D-pad Up→  [6] FULL TELEOP mode
  *
  * ═══════════════════════════════════════════════════════════════════
  *  CONTROLS INSIDE EACH MODE
@@ -46,15 +48,31 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
  *    Y              — Run intake reverse (−0.75)
  *    X              — STOP intake
  *
- *  [4] FULL TELEOP
+ *  [4] TURRET
+ *    Cross / Left   — Turn counter-clockwise / left (momentary hold)
+ *    Triangle / Right — Turn clockwise / right (momentary hold)
+ *    D-Pad Up       — Power +5%
+ *    D-Pad Down     — Power -5%
+ *    X              — STOP turret
+ *
+ *  [5] GATE
+ *    D-Pad Up       — Default Position +0.05
+ *    D-Pad Down     — Default Position -0.05
+ *    D-Pad Left     — Open Position +0.05
+ *    D-Pad Right    — Open Position -0.05
+ *    Right Bumper   — Hold = testClose | Release = testOpen
+ *
+ *  [6] FULL TELEOP
  *    Full competition drive & mechanism controls. Supports both dual-driver
  *    (GP1 drive + GP2 mechanisms) and single-driver (GP1 solo) setups.
  *    - Drive: GP1 Left Stick (xy), GP1 Right Stick (turn), GP1 RT (slow-mode)
- *    - Shooter: GP2 X (Far), GP2 B (Close), GP2 A (Stop) / GP1 D-Pad (solo)
+ *    - Turret: GP2 Cross (CCW/Left), GP2 Triangle (CW/Right) (momentary hold)
+ *    - Shooter: GP2 X (Far), GP2 B (Close), GP2 A (Stop) / GP1 D-Pad
  *    - Intake: GP2 LB (Intake), GP2 LT (Reverse) / GP1 LT (solo)
+ *    - Gate Tuning: GP2 D-Pad Up/Down (+/- Def), GP2 D-Pad Left/Right (+/- Open)
  *    - Rapid Fire: GP2 Y or GP1 RB (when LB not held)
- *    - Manual Shoot: GP2 RB
- *    - Cargo Reset: GP2 or GP1 D-Pad Down
+ *    - Manual Shoot / Gate: GP2 RB (Hold = testClose & feed | Release = testOpen)
+ *    - Cargo Reset: GP1 D-Pad Down
  */
 @TeleOp(name = "Diagnostic Test", group = "Test")
 public class DiagnosticTest extends OpMode {
@@ -64,7 +82,9 @@ public class DiagnosticTest extends OpMode {
         DRIVETRAIN("[1] DRIVETRAIN"),
         SHOOTER("[2] SHOOTER"),
         INTAKE("[3] INTAKE"),
-        TELEOP("[4] FULL TELEOP");
+        TURRET("[4] TURRET"),
+        GATE("[5] GATE"),
+        TELEOP("[6] FULL TELEOP");
 
         public final String label;
         Mode(String label) { this.label = label; }
@@ -90,6 +110,9 @@ public class DiagnosticTest extends OpMode {
     private int manualRPM = 970;
     private boolean wasReversing = false;
 
+    // Turret state
+    private double turretTestPower = Turret.DEFAULT_TURRET_POWER;
+
     private static final double DEAD_ZONE = 0.1;
 
     // ── Lifecycle ──────────────────────────────────────────────────
@@ -113,8 +136,8 @@ public class DiagnosticTest extends OpMode {
         shootIntervalTimer = new Timer();
 
         telemetry.addLine("=== DIAGNOSTIC TEST INITIALIZED ===");
-        telemetry.addLine("Hold LB+RB + face button to switch modes:");
-        telemetry.addLine("  A=Drive  B=Shooter  X=Intake  Y=Full TeleOp");
+        telemetry.addLine("Hold LB+RB + button to switch modes:");
+        telemetry.addLine("  A=Drive  B=Shooter  X=Intake  Y=Turret  D-Down=Gate  D-Up=TeleOp");
         telemetry.update();
     }
 
@@ -129,7 +152,7 @@ public class DiagnosticTest extends OpMode {
 
     @Override
     public void loop() {
-        // ── 1. Mode Switching Combo (LB + RB + face button) ────────
+        // ── 1. Mode Switching Combo (LB + RB + button) ─────────────
         if (gamepad1.left_bumper && gamepad1.right_bumper && modeSwitchTimer.milliseconds() > 400) {
             if (gamepad1.a) {
                 switchMode(Mode.DRIVETRAIN);
@@ -138,14 +161,18 @@ public class DiagnosticTest extends OpMode {
             } else if (gamepad1.x) {
                 switchMode(Mode.INTAKE);
             } else if (gamepad1.y) {
+                switchMode(Mode.TURRET);
+            } else if (gamepad1.dpad_up) {
                 switchMode(Mode.TELEOP);
+            } else if (gamepad1.dpad_down) {
+                switchMode(Mode.GATE);
             }
         }
 
         // ── 2. Header Telemetry ────────────────────────────────────
         telemetry.addLine("=================================");
         telemetry.addData(">> ACTIVE MODE", currentMode.label);
-        telemetry.addLine("Switch Mode: hold LB+RB + A/B/X/Y");
+        telemetry.addLine("Switch Mode: hold LB+RB + A/B/X/Y/D-Down/D-Up");
         telemetry.addLine("---------------------------------");
 
         // ── 3. Dispatch to Active Mode Handler ─────────────────────
@@ -153,6 +180,8 @@ public class DiagnosticTest extends OpMode {
             case DRIVETRAIN: loopDrivetrain(); break;
             case SHOOTER:    loopShooter();    break;
             case INTAKE:     loopIntake();     break;
+            case TURRET:     loopTurret();     break;
+            case GATE:       loopGate();       break;
             case TELEOP:     loopTeleop();     break;
         }
 
@@ -178,6 +207,8 @@ public class DiagnosticTest extends OpMode {
         if (robot != null) {
             if (robot.shooter != null) robot.shooter.stopFlyWheel();
             if (robot.intake != null) robot.intake.intakeStop();
+            if (robot.turret != null) robot.turret.stop();
+            if (robot.gate != null) robot.gate.close();
         }
         if (follower != null) {
             follower.manual(0, 0, 0);
@@ -311,7 +342,100 @@ public class DiagnosticTest extends OpMode {
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  [4] FULL TELEOP MODE
+    //  [4] TURRET MODE
+    // ════════════════════════════════════════════════════════════════
+    private void loopTurret() {
+        if (!gamepad1.left_bumper && !gamepad1.right_bumper) {
+            // Power tuning with D-Pad
+            if (dpadDebounce.milliseconds() > 200) {
+                if (gamepad1.dpad_up) {
+                    turretTestPower = Math.min(1.0, turretTestPower + 0.05);
+                    dpadDebounce.reset();
+                } else if (gamepad1.dpad_down) {
+                    turretTestPower = Math.max(0.10, turretTestPower - 0.05);
+                    dpadDebounce.reset();
+                }
+            }
+
+            // Momentary hold rotation: Cross / Left (CCW) & Triangle / Right (CW)
+            boolean turnCCW = gamepad1.cross || gamepad2.cross || gamepad1.dpad_left;
+            boolean turnCW = gamepad1.triangle || gamepad2.triangle || gamepad1.dpad_right;
+
+            if (gamepad1.x) {
+                robot.turret.stop();
+            } else if (turnCCW && !turnCW) {
+                robot.turret.turn(-turretTestPower);
+            } else if (turnCW && !turnCCW) {
+                robot.turret.turn(turretTestPower);
+            } else {
+                robot.turret.stop();
+            }
+        }
+
+        double power = robot.turret.getPower();
+        String motionState;
+        if (power > 0.01) {
+            motionState = String.format("TURNING CLOCKWISE (+%.2f)", power);
+        } else if (power < -0.01) {
+            motionState = String.format("TURNING COUNTER-CLOCKWISE (%.2f)", power);
+        } else {
+            motionState = "STOPPED (BRAKE)";
+        }
+
+        telemetry.addLine("[TURRET CONTROLS]");
+        telemetry.addLine("  Cross / Left: CCW | Triangle / Right: CW");
+        telemetry.addLine("  D-Pad Up/Down: +/- Power (5%) | X: STOP");
+        telemetry.addData("Turret State", motionState);
+        telemetry.addData("Configured Power", "%.2f", turretTestPower);
+        telemetry.addData("Applied Power", "%.2f", power);
+        telemetry.addData("Encoder Position", robot.turret.getCurrentPosition());
+        telemetry.addData("Velocity", "%.1f ticks/sec", robot.turret.getVelocity());
+        telemetry.addData("Current Draw", "%.2f A", robot.turret.getCurrentAmps());
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  [5] GATE MODE
+    // ════════════════════════════════════════════════════════════════
+    private void loopGate() {
+        // D-Pad Position Tuning with 200ms Debounce & Clamping [0.0, 1.0]
+        if (dpadDebounce.milliseconds() > 200) {
+            if (gamepad2.dpad_down) {
+                Gate.TEST_DEFAULT_POSITION = Math.max(0.0, Math.min(1.0, Math.round((Gate.TEST_DEFAULT_POSITION - 0.05) * 100.0) / 100.0));
+                dpadDebounce.reset();
+            } else if (gamepad2.dpad_up) {
+                Gate.TEST_DEFAULT_POSITION = Math.max(0.0, Math.min(1.0, Math.round((Gate.TEST_DEFAULT_POSITION + 0.05) * 100.0) / 100.0));
+                dpadDebounce.reset();
+            } else if (gamepad2.dpad_right) {
+                Gate.TEST_OPEN_POSTITION = Math.max(0.0, Math.min(1.0, Math.round((Gate.TEST_OPEN_POSTITION - 0.05) * 100.0) / 100.0));
+                dpadDebounce.reset();
+            } else if (gamepad2.dpad_left) {
+                Gate.TEST_OPEN_POSTITION = Math.max(0.0, Math.min(1.0, Math.round((Gate.TEST_OPEN_POSTITION + 0.05) * 100.0) / 100.0));
+                dpadDebounce.reset();
+            }
+        }
+
+        if (gamepad2.right_bumper) {
+            robot.gate.testClose();
+        } else {
+            robot.gate.testOpen();
+        }
+
+        telemetry.addLine("[GATE TEST CONTROLS]");
+        telemetry.addLine("  GP2 D-Pad Up   : Default Pos +0.05");
+        telemetry.addLine("  GP2 D-Pad Down : Default Pos -0.05");
+        telemetry.addLine("  GP2 D-Pad Left : Open Pos +0.05");
+        telemetry.addLine("  GP2 D-Pad Right: Open Pos -0.05");
+        telemetry.addLine("  GP2 Right Bumper: Hold = testClose | Release = testOpen");
+        telemetry.addLine("---------------------------------");
+        telemetry.addData("Commanded State", gamepad2.right_bumper ? "testClose (RB Held)" : "testOpen (RB Released)");
+        telemetry.addData("Current Servo Pos", "%.2f", robot.gate.getPosition());
+        telemetry.addData("TEST_DEFAULT_POS", "%.2f", Gate.TEST_DEFAULT_POSITION);
+        telemetry.addData("TEST_OPEN_POS", "%.2f", Gate.TEST_OPEN_POSTITION);
+        telemetry.addData("Saved Constants", "Def: %.2f | Open: %.2f", Gate.DEFAULT_POSITION, Gate.OPEN_POSITION);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  [6] FULL TELEOP MODE
     // ════════════════════════════════════════════════════════════════
     private void loopTeleop() {
         // ── Alliance Toggle (GP1 Y / X when not in mode switch) ───
@@ -347,9 +471,36 @@ public class DiagnosticTest extends OpMode {
             gamepad2.rumble(300);
         }
 
-        // Queue clear override (GP2 D-Pad Down or GP1 D-Pad Down)
-        if (gamepad2.dpad_down || (!gamepad1.left_bumper && gamepad1.dpad_down)) {
+        // Queue clear override (GP1 D-Pad Down)
+        if (!gamepad1.left_bumper && gamepad1.dpad_down) {
             robot.cargoTracker.clear();
+        }
+
+        // ── Gate Tuning via GP2 D-Pad ──────────────────────────────
+        if (dpadDebounce.milliseconds() > 200) {
+            if (gamepad2.dpad_down) {
+                Gate.TEST_DEFAULT_POSITION = Math.max(0.0, Math.min(1.0, Math.round((Gate.TEST_DEFAULT_POSITION - 0.05) * 100.0) / 100.0));
+                dpadDebounce.reset();
+            } else if (gamepad2.dpad_up) {
+                Gate.TEST_DEFAULT_POSITION = Math.max(0.0, Math.min(1.0, Math.round((Gate.TEST_DEFAULT_POSITION + 0.05) * 100.0) / 100.0));
+                dpadDebounce.reset();
+            } else if (gamepad2.dpad_right) {
+                Gate.TEST_OPEN_POSTITION = Math.max(0.0, Math.min(1.0, Math.round((Gate.TEST_OPEN_POSTITION - 0.05) * 100.0) / 100.0));
+                dpadDebounce.reset();
+            } else if (gamepad2.dpad_left) {
+                Gate.TEST_OPEN_POSTITION = Math.max(0.0, Math.min(1.0, Math.round((Gate.TEST_OPEN_POSTITION + 0.05) * 100.0) / 100.0));
+                dpadDebounce.reset();
+            }
+        }
+
+        // ── Turret Controls ────────────────────────────────────────
+        // Hold Cross or Triangle to rotate in separate directions; stops on release
+        if (gamepad2.cross && !gamepad2.triangle) {
+            robot.turret.turnCounterClockwise();
+        } else if (gamepad2.triangle && !gamepad2.cross) {
+            robot.turret.turnClockwise();
+        } else {
+            robot.turret.stop();
         }
 
         // ── Shooter Controls ───────────────────────────────────────
@@ -423,10 +574,22 @@ public class DiagnosticTest extends OpMode {
             }
         }
 
+        // Gate control (GP2 RB hold commands testClose, release commands testOpen)
+        if (gamepad2.right_bumper) {
+            robot.gate.testClose();
+        } else {
+            robot.gate.testOpen();
+        }
+
         // ── Telemetry ──────────────────────────────────────────────
         telemetry.addLine("[TELEOP INTEGRATION STATUS]");
         telemetry.addData("Alliance", Robot.currentAlliance);
+        telemetry.addData("Gate Commanded", gamepad2.right_bumper ? "testClose (RB Held)" : "testOpen (RB Released)");
+        telemetry.addData("Gate Servo Pos", "%.2f", robot.gate.getPosition());
+        telemetry.addData("Gate Test Positions", "Def: %.2f | Open: %.2f (GP2 D-Pad)", Gate.TEST_DEFAULT_POSITION, Gate.TEST_OPEN_POSTITION);
         telemetry.addData("Rapid Fire Active", isRapidFireOn ? "ON" : "OFF");
+        telemetry.addData("Turret Power", "%.2f", robot.turret.getPower());
+        telemetry.addData("Turret Position", robot.turret.getCurrentPosition());
         telemetry.addData("Goal Distance", "%.1f in", distanceToGoal);
         telemetry.addData("Flywheel Velocity", "%.1f RPM", robot.shooter.shooterMotor.getVelocity());
         telemetry.addData("Intake Power", "%.2f", robot.intake.intakeMotor.getPower());
@@ -438,6 +601,7 @@ public class DiagnosticTest extends OpMode {
     public Mode getCurrentMode() { return currentMode; }
     public boolean isRapidFireOn() { return isRapidFireOn; }
     public int getManualRPM() { return manualRPM; }
+    public double getTurretTestPower() { return turretTestPower; }
 
     // ── Cleanup ────────────────────────────────────────────────────
     @Override
