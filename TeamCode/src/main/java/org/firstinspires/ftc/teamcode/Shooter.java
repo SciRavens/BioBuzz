@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -10,17 +9,17 @@ import java.util.TreeMap;
 
 public class Shooter {
 
-    public final int shooterCloseRPM = 970; // 950
-    public final int shooterFarRPM = 1375;
-    public final int shooterClosePassiveRPM = 1225;
-    public final int shooterFarPassiveRPM = 6000;
-    public final int autonShooterFarRPM = 1370;
-    public final int autonMidRPM = 1050;
+    public final int shooterCloseRPM = 1170; // 950
+    public final int shooterFarRPM = 1600;
+    public final int shooterClosePassiveRPM = 1425;
+    public final int shooterFarPassiveRPM = 6200;
+    public final int autonShooterFarRPM = 1570;
+    public final int autonMidRPM = 1250;
     public final int autonMidRedRPM = 1250;
     public final int autonMidBlueRPM = 1400;
     public final int shooterMidRedRPM = 1215;
     public final int shooterMidBlueRPM = 1400;
-    public final int shooterMidRPM = 975;
+    public final int shooterMidRPM = 1175;
     public final int shooterHumanRPM = -1200;
     public final int shooterOffRPM = 0;
     public final int autoClose = 800;
@@ -173,7 +172,7 @@ public class Shooter {
     }
 
     public boolean reachedSpeed() {
-        return shooterMotor.getVelocity() >= currentRPM;
+        return shooterMotor.getVelocity() > 100;
     }
 
     public boolean reachMidSpeed() {
