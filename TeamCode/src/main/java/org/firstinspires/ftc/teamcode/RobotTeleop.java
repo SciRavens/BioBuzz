@@ -98,28 +98,37 @@ public class RobotTeleop extends OpMode {
             robot.shooter.startCloseShoot();
         } else if (gamepad1.a) {
             robot.shooter.startHumanIntake();
-        } else if (gamepad2.a) {
+        } else if (gamepad2.dpad_left) {
             robot.shooter.stopShoot();
         }
 
-        // ------------------ INTAKE CONTROLS ------------------
-        if (gamepad2.left_bumper) {
-            robot.intake.startIntakeOnly();
-        } else if (gamepad2.left_trigger > 0.5) {
-            robot.intake.startReverseIntake();
-        } else if (!isRapidFireOn && !gamepad2.right_bumper) {
-            robot.intake.stopIntake();
+        // ------------------ TURRET CONTROLS ------------------
+        // Hold Cross or Triangle to rotate in separate directions; stops on release
+        if (gamepad2.dpad_left && !gamepad2.dpad_right) {
+            robot.turret.turnClockwise();
+        } else if (gamepad2.dpad_right && !gamepad2.dpad_left) {
+            robot.turret.turnCounterClockwise();
+        } else {
+            robot.turret.stop();
+        }
+
+        // ------------------ GATE CONTROLS ------------------
+        if (gamepad2.right_bumper) {
+            robot.gate.open();
+        } else {
+            robot.gate.close();
         }
 
         // ------------------ RAPID FIRE ------------------
-        // Mid-Range Rapid Fire (gamepad2.y)
-        if (gamepad2.y && !isRapidFireOn) {
+        // Mid-Range Rapid Fire (gamepad2.dpad_up)
+        if (gamepad2.dpad_up && !isRapidFireOn) {
             isRapidFireOn = true;
             robot.shooter.startMidShoot();
             rapidTimer.reset();
+            shootIntervalTimer.reset();
         }
 
-        // Close-Range Rapid Fire (gamepad1.right_bumper or combined trigger)
+        // ------------------ INTAKE & FEEDER CONTROLS ------------------
         if (isRapidFireOn) {
             if (robot.shooter.reachedSpeed()) {
                 robot.intake.shootArtifacts();
@@ -129,37 +138,48 @@ public class RobotTeleop extends OpMode {
                 }
                 gamepad1.rumble(500);
                 gamepad2.rumble(500);
+            } else {
+                robot.intake.stopIntake();
             }
+
             if (rapidTimer.milliseconds() >= 5750) {
                 robot.shooter.stopFlyWheel();
                 robot.intake.intakeStop();
                 robot.cargoTracker.clear();
                 isRapidFireOn = false;
             }
-        } else {
-            // Manual Trigger Shooting (gamepad2.right_bumper)
-            if (gamepad2.right_bumper) {
-                if (robot.shooter.reachedSpeed()) {
-                    robot.intake.shootArtifacts();
-                    if (shootIntervalTimer.milliseconds() > 450 && !robot.cargoTracker.isEmpty()) {
-                        robot.cargoTracker.popShooterCargo();
-                        shootIntervalTimer.reset();
-                    }
-                    gamepad1.rumble(500);
-                    gamepad2.rumble(500);
+        } else if (gamepad2.right_bumper) {
+            // Manual Shooting Feed (Right Bumper)
+            if (robot.shooter.reachedSpeed()) {
+                robot.intake.shootArtifacts();
+                if (shootIntervalTimer.milliseconds() > 450 && !robot.cargoTracker.isEmpty()) {
+                    robot.cargoTracker.popShooterCargo();
+                    shootIntervalTimer.reset();
                 }
+                gamepad1.rumble(500);
+                gamepad2.rumble(500);
             } else {
-                if (!gamepad2.left_bumper && gamepad2.left_trigger <= 0.5) {
-                    robot.intake.stopIntake();
-                }
+                robot.intake.stopIntake();
             }
+        } else if (gamepad2.right_trigger > 0.1 || gamepad2.left_bumper) {
+            // Forward intake (Right Trigger or Left Bumper)
+            robot.intake.startIntakeOnly();
+        } else if (gamepad2.left_trigger > 0.1) {
+            // Reverse intake (Left Trigger)
+            robot.intake.startReverseIntake();
+        } else {
+            // Idle: stop intake
+            robot.intake.stopIntake();
         }
 
         // ------------------ TELEMETRY ------------------
         robot.shooter.shooterLightUpdate();
         robot.cargoTracker.addTelemetry(telemetry);
         telemetry.addData("Alliance", Robot.currentAlliance);
+        telemetry.addData("Gate", "%s (%.2f)", robot.gate.isOpen() ? "OPEN" : "CLOSED", robot.gate.getPosition());
         telemetry.addData("Rapid Fire Active", isRapidFireOn);
+        telemetry.addData("Turret Power", "%.2f", robot.turret.getPower());
+        telemetry.addData("Turret Position", robot.turret.getCurrentPosition());
         telemetry.addData("Goal Distance", "%.1f in", distanceToGoal);
         telemetry.addData("Pose", "(%.1f, %.1f) @ %.1f°", currentPose.x(), currentPose.y(), Math.toDegrees(currentPose.heading()));
         telemetry.update();
@@ -169,6 +189,8 @@ public class RobotTeleop extends OpMode {
     public void stop() {
         robot.shooter.stopShoot();
         robot.intake.stopIntake();
+        robot.turret.stop();
         robot.cargoTracker.clear();
+        robot.gate.close();
     }
 }
