@@ -167,6 +167,11 @@ public class Shooter {
         shooterMotor.setVelocity(shooterOffRPM);
     }
 
+    /** True if velocity is within tolerance below the target (used to ride out per-ball dips). */
+    public boolean isNearTarget(double tolerance) {
+        return shooterMotor.getVelocity() >= currentRPM - tolerance;
+    }
+
     public boolean reachedSpeed() {
         return shooterMotor.getVelocity() >= currentRPM;
     }

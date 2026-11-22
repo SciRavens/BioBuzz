@@ -24,6 +24,8 @@ public class RobotTeleop extends OpMode {
 
     private static final double DEAD_ZONE = 0.1;
     private boolean isRapidFireOn = false;
+    private boolean feedLatched = false;
+    private static final double FEED_DROPOUT_RPM = 150; // tune: allowed dip below target while feeding
 
     @Override
     public void init() {
@@ -98,7 +100,7 @@ public class RobotTeleop extends OpMode {
             robot.shooter.startCloseShoot();
         } else if (gamepad1.a) {
             robot.shooter.startHumanIntake();
-        } else if (gamepad2.dpad_left) {
+        } else if (gamepad2.y) {
             robot.shooter.stopShoot();
         }
 
@@ -129,8 +131,19 @@ public class RobotTeleop extends OpMode {
         }
 
         // ------------------ INTAKE & FEEDER CONTROLS ------------------
+        // Latch feeding: start when flywheel reaches speed, keep going through the
+        // velocity dip each ball causes. Only unlatch if it drops well below target.
+        boolean wantsToFeed = isRapidFireOn || gamepad2.right_bumper;
+        if (!wantsToFeed) {
+            feedLatched = false;
+        } else if (robot.shooter.reachedSpeed()) {
+            feedLatched = true;
+        } else if (!robot.shooter.isNearTarget(FEED_DROPOUT_RPM)) {
+            feedLatched = false;
+        }
+
         if (isRapidFireOn) {
-            if (robot.shooter.reachedSpeed()) {
+            if (feedLatched) {
                 robot.intake.shootArtifacts();
                 if (shootIntervalTimer.milliseconds() > 450 && !robot.cargoTracker.isEmpty()) {
                     robot.cargoTracker.popShooterCargo();
@@ -150,7 +163,7 @@ public class RobotTeleop extends OpMode {
             }
         } else if (gamepad2.right_bumper) {
             // Manual Shooting Feed (Right Bumper)
-            if (robot.shooter.reachedSpeed()) {
+            if (feedLatched) {
                 robot.intake.shootArtifacts();
                 if (shootIntervalTimer.milliseconds() > 450 && !robot.cargoTracker.isEmpty()) {
                     robot.cargoTracker.popShooterCargo();
