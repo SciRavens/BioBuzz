@@ -4,10 +4,21 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import java.util.Map;
 import java.util.TreeMap;
 
 public class Shooter {
+
+    public static final DcMotorSimple.Direction SHOOTER_DIRECTION = DcMotorSimple.Direction.FORWARD;
+    public static final DcMotorEx.ZeroPowerBehavior SHOOTER_ZERO_POWER = DcMotorEx.ZeroPowerBehavior.BRAKE;
+
+    // Paste tuned coefficients from FlywheelPIDFTuner and set USE_CUSTOM_PIDF = true
+    public static final boolean USE_CUSTOM_PIDF = false;
+    public static final double TUNED_P = 12.0;
+    public static final double TUNED_I = 0.5;
+    public static final double TUNED_D = 0.0;
+    public static final double TUNED_F = 11.7;
 
     public final int shooterCloseRPM = 1170; // 950
     public final int shooterFarRPM = 1600;
@@ -53,9 +64,29 @@ public class Shooter {
         if (hardwareMap != null) {
             shooterMotor = hardwareMap.get(DcMotorEx.class, "shooterMotor");
             shooterMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-            shooterMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-            shooterMotor.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+            shooterMotor.setDirection(SHOOTER_DIRECTION);
+            shooterMotor.setZeroPowerBehavior(SHOOTER_ZERO_POWER);
+            if (USE_CUSTOM_PIDF) {
+                setPIDFCoefficients(TUNED_P, TUNED_I, TUNED_D, TUNED_F);
+            }
         }
+    }
+
+    public void setPIDFCoefficients(double p, double i, double d, double f) {
+        if (shooterMotor != null) {
+            shooterMotor.setVelocityPIDFCoefficients(p, i, d, f);
+        }
+    }
+
+    public PIDFCoefficients getPIDFCoefficients() {
+        if (shooterMotor == null) {
+            return null;
+        }
+        return shooterMotor.getPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER);
+    }
+
+    public double getVelocity() {
+        return shooterMotor != null ? shooterMotor.getVelocity() : 0.0;
     }
 
     public void startCloseShoot() {
